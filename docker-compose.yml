@@ -1,0 +1,49 @@
+version: "3.9"
+
+networks:
+  polyglot-net:
+    driver: bridge
+
+volumes:
+  pg_data:
+  mongo_data:
+
+services:
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: pg_node
+    environment:
+      POSTGRES_USER: netflix
+      POSTGRES_PASSWORD: secret123
+      POSTGRES_DB: netflix_users
+    ports:
+      - "5432:5432"        # exposed on your Mac's LAN IP later
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+      - ./init/postgres:/docker-entrypoint-initdb.d   # seed scripts
+    networks:
+      - polyglot-net
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U netflix"]
+      interval: 10s
+      retries: 5
+
+  mongo:
+    image: mongo:7.0
+    container_name: mongo_node
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: netflix
+      MONGO_INITDB_ROOT_PASSWORD: secret123
+      MONGO_INITDB_DATABASE: netflix_catalog
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+      - ./init/mongo:/docker-entrypoint-initdb.d
+    networks:
+      - polyglot-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      retries: 5
